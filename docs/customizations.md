@@ -1,6 +1,6 @@
 # Fork 定制清单
 
-分支、数据目录、启动及同步约定见 [Miro 工作流](miro-workflow.md)；本 Fork 的稳定主线是 `miro/main`，开发集成为 `miro/dev`。
+分支、数据目录、启动及同步约定见 [Miro 工作流](miro-workflow.md)；本 Fork 的稳定主线是 `miro/main`，开发集成为 `miro/dev`。首次整理与 PiWeb 0.18.0 / Pi 1.6.0 升级的完整验收见 [升级记录](miro-upgrade-2026-11-25.md)：3820 项通过、0 失败、2 项原有跳过，并完成隔离真实 HTTP 重启与全部定制浏览器回归。下列各功能小节保留其阶段性专项证据，正式服务状态以部署回执为准。
 
 ## URL 启动时聚焦输入框
 

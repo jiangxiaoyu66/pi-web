@@ -28,7 +28,15 @@ async function checkLayout(placement) {
   }, { cwd, placement, width: SIDEBAR_DEFAULT_WIDTH });
   const page = await context.newPage();
   const errors = [];
+  const consoleErrors = [];
+  const failedResponses = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) failedResponses.push({ method: response.request().method(), url: response.url(), status: response.status() });
+  });
   // Block every non-fixture write, including implicit sidebar state saves.
   const unexpectedWrites = [];
   let uiState = emptySessionUiState();
@@ -37,7 +45,7 @@ async function checkLayout(placement) {
     const method = route.request().method();
     if (path === "/api/sessions/ui-state") {
       if (method === "POST") uiState = applySessionUiStateRequest(uiState, route.request().postDataJSON(), Date.now()).state;
-      return route.fulfill({ json: uiState });
+      return route.fulfill({ json: { state: uiState } });
     }
     if (path === "/api/cwd/validate") return route.fulfill({ json: { valid: true, path: cwd, projectRoot: cwd, projectKey: cwd } });
     if (path === "/api/agent/running") return route.fulfill({ json: { runningSessionIds: [], awaitingInputSessionIds: [], sessionListVersion: 0, sessionUiStateRevision: uiState.revision, serverNow: Date.now() } });
@@ -45,6 +53,14 @@ async function checkLayout(placement) {
       unexpectedWrites.push(`${method} ${path}`);
       return route.fulfill({ status: 403, json: { error: "Unexpected fixture write" } });
     }
+    // Match the other isolated settings suites: the browser's fixture cwd
+    // is not a server-authorized file root. Never query its real repository,
+    // model settings or trust state (and never grant it access for a test).
+    if (path === "/api/git/status") return route.fulfill({ json: { files: [], isGit: false } });
+    if (path === "/api/git/diff") return route.fulfill({ json: { supported: false } });
+    if (path === "/api/models") return route.fulfill({ json: { models: [], modelList: [], defaultModel: null } });
+    if (path === "/api/worktrees") return route.fulfill({ json: { projectRoot: cwd, projectKey: cwd, isGit: false, isTopLevel: true, currentWorktreePath: cwd, worktrees: [] } });
+    if (path === "/api/project-trust") return route.fulfill({ json: { requiresTrust: false, trusted: true, decision: true, inherited: false, servers: [] } });
     return route.continue();
   });
   // Keep the UI real but isolate it from the user's catalogue and files.
@@ -153,9 +169,12 @@ async function checkLayout(placement) {
   await viewerButton.click();
   await page.getByText("仅适用于浏览器和编辑器位于同一台电脑。", { exact: false }).waitFor();
   await page.screenshot({ path: `${artifacts}/${placement}-mobile-menu.png`, animations: "disabled" });
-  assert.deepEqual(errors, []);
+  writeFileSync(`${artifacts}/${placement}-diagnostics.json`, JSON.stringify({ errors, consoleErrors, failedResponses, unexpectedWrites }, null, 2));
+  assert.deepEqual(errors, [], "Unexpected browser pageerror");
+  assert.deepEqual(consoleErrors, [], "Unexpected browser console errors");
+  assert.deepEqual(failedResponses, [], "Unexpected failed HTTP responses");
   assert.deepEqual(unexpectedWrites, []);
-  console.log(`PASS: ${placement}, default/minimum sidebar width, desktop/mobile menus, inline isolation, keyboard/context menus, focus restore, all preview/root entries, preserved download`);
+  console.log(`PASS: ${placement}, default/minimum sidebar width, desktop/mobile menus, inline isolation, keyboard/context menus, focus restore, all preview/root entries, preserved download; pageerror, console errors and failed HTTP responses are empty`);
   await context.close();
 }
 try {

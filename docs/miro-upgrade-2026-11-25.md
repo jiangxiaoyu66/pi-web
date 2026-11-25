@@ -43,7 +43,16 @@
 
 ## 最终验收与部署状态
 
-待完成审查补强、上游合并及最终回归后填写。不得将上述预检当作已完成重启验收。
+- 升级前定制恢复点：`7e1dec239164bdeb5c69045cc9209fb7fe55e87f`，已推送 `origin/miro/main` 与 `origin/miro/dev`。首次推送因可选 CI workflow 修改缺少 GitHub `workflow` scope 被拒；撤掉该可选改动后，仅修订尚未发布的提交并正常推送，没有强推或修改已共享历史。
+- GitHub 默认分支已改为 `miro/main`。保留官方 CI 定义，未申请额外账户权限；不宣称远端 CI 已执行。
+- 升级分支 `sync/0.18.0-20261125` 从定制恢复点合并固定官方目标；仅一处文本冲突：`SkillsConfig.tsx` import，保留定制 `SkillGroupTree` 与上游 `readJsonOrThrow` 两者。其余接入经 TypeScript、测试和行为回归核对。
+- **升级后完整测试：3820 passed、0 failed、2 skipped，共 3822 项**。日志 `/tmp/pi-web-miro-after-upstream.log`；上游新增用例包含在本轮内。
+- 升级后 `tsc --noEmit`、全仓 ESLint、diff 检查通过。冲突文件 LSP 主动检查超时，不将其空诊断当作确认无错；实际 TypeScript 编译检查通过。
+- 隔离服务真实 HTTP 验收通过：GET 缺失不创建文件；create/move/collapse/rename；64 次并发增量写不丢失；全局/项目隔离；文件 0600 / 目录 0700。停止自建服务后换新进程重启，完整分类/归属/折叠与磁盘数据逐项相等。
+- 升级后浏览器验收通过：MCP 10 项、Skills 8 项、autofocus 6 组；编辑器两种布局、260px/180px 侧栏、桌面/手机菜单通过。编辑器初轮发现只读 cwd 授权 403 是未 mock 完整的测试夹具问题；仅补充测试的只读 fixtures 及 console/失败 HTTP 断言，未修改生产权限；复测通过，服务日志增量 0 个 403、0 次写入。
+- 所有运行测试使用独立 30142 与临时 agentDir，未向真实会话/分组/MCP 配置写测试数据；自建 30142 服务已停止，正式 30141 未被测试接管。证据 `/tmp/pi-web-miro-upgraded-runtime-report.md`。
+- 正式部署由仓库外 `deploy-miro.sh` 执行：先检查干净 `miro/main` 和目标祖先关系，停止原 LaunchAgent，再将本地主线快进到已测试提交、切换预验证的 1.6.0 依赖、重启 LaunchAgent，最后只读检查首页、sessions、分类 API。旧依赖保留于私有备份，失败不 reset/clean/强推。
+- 本文提交时正式服务尚未重启；最终真实状态只认下述部署回执。远端 `miro/main` / `miro/dev` 推送到已测试合并提交，官方镜像 `main` 仅快进至 432366b；本地运行中的 `miro/main` 在停服部署时才快进，避免 HMR 混用两代 SDK。
 
 重启回执保存于私有备份目录 `deployment-status.json` / `deployment.log`，不写入运行中的源码工作区。只有回执 `state: verified` 才表示新的 `miro/main` 服务已通过真实 HTTP 检查；`failed` 时看日志，不重复盲目重启。当前聊天与服务器同进程，重启会断开现有连接。
 
