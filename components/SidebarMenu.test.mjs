@@ -53,6 +53,13 @@ function surface(props = {}) {
   })));
 }
 
+test("settings menus opt into modal stacking without changing ordinary menu layers", () => {
+  assert.doesNotMatch(surface(), /z-index:1101/);
+  assert.match(surface({ layer: "settings" }), /z-index:1101/);
+  assert.match(surface({ layer: "settings", sheet: true }), /sidebar-sheet-layer[^>]*z-index:1101/);
+  assert.doesNotMatch(surface({ sheet: true }), /z-index:1101/);
+});
+
 test("the menu waits for the client before portaling, so server markup is empty", () => {
   const html = renderToStaticMarkup(h(SidebarMenu, {
     open: true,

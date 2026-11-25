@@ -170,6 +170,8 @@ import {
   type McpSignInRun,
 } from "./mcp-sign-in-helpers";
 import { projectTrustReloadKey } from "./settings-ui-helpers";
+import { McpCategoryList } from "./McpCategoryList";
+import { refreshMcpCategories } from "@/hooks/useMcpCategories";
 
 type Translate = ReturnType<typeof useI18n>["t"];
 
@@ -806,7 +808,7 @@ export function McpConfig({
         setAdding(false);
         setAdded((current) => (current?.key === key ? current : null));
       }}
-      onRefresh={() => void refresh()}
+      onRefresh={() => { void refresh(); void refreshMcpCategories(); }}
       onCodemodeChange={(preference) => void saveCodemode(preference)}
       onCodemodeModeChange={(mode) => void saveCodemodeMode(mode)}
       onCodemodeInlineBudgetSave={(budget) => void saveCodemodeInlineBudget(budget)}
@@ -1083,6 +1085,7 @@ export function McpConfigView({
                     <McpServerGroupList
                       key={group.scope}
                       group={group}
+                      cwd={cwd ?? undefined}
                       context={context}
                       selected={adding ? null : selected}
                       selectedRowRef={selectedRowRef}
@@ -1307,6 +1310,7 @@ function groupStatusText(status: McpGroupStatus, t: Translate): { note?: string;
 
 function McpServerGroupList({
   group,
+  cwd,
   context,
   selected,
   selectedRowRef,
@@ -1319,6 +1323,7 @@ function McpServerGroupList({
   onGroupSwitch,
 }: {
   group: McpServerGroup;
+  cwd?: string;
   context: McpRowContext;
   selected: string | null;
   /** Set to the selected row's button, when it is in this group. */
@@ -1360,7 +1365,7 @@ function McpServerGroupList({
       </ConfigSidebarGroupLabel>
       {statusText && <ConfigSidebarGroupStatus note={statusText.note} error={statusText.error} />}
       {emptyKey && <div className="mcp-sidebar-group-empty">{t(emptyKey)}</div>}
-      {group.servers.map((server) => {
+      <McpCategoryList scope={group.scope} cwd={cwd} servers={group.servers} selected={selected} renderServer={(server) => {
         const key = mcpServerKey(server);
         const state = mcpServerRowState(server, context);
         const tone = mcpRowStateTone(state);
@@ -1380,7 +1385,7 @@ function McpServerGroupList({
             {badgeKey && <span className={`mcp-sidebar-badge is-${tone}`}>{t(badgeKey)}</span>}
           </ConfigSidebarItem>
         );
-      })}
+      }} />
     </div>
   );
 }

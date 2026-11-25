@@ -614,7 +614,8 @@ test("the Code mode pane's budget field saves a whole number, or empty for pi's 
   assert.match(save(saving), /disabled=""/);
   assert.match(field(saving), /<span role="status" class="mcp-config-line is-dim">Saving…<\/span>/);
   assert.deepEqual(codemodeOptions(saving).map(({ disabled }) => disabled), [true, true]);
-  assert.equal(decode(saving).match(/role="status"/g).length, 1);
+  // The sidebar independently loads server-persisted categories.
+  assert.equal(decode(saving).match(/role="status" class="mcp-config-line/g).length, 1);
   // A server change on its way makes the field wait as well.
   assert.match(input(codemodeView(info(budget), { view: { busy: "switch:global\0docs" } })), /readOnly=""/);
 
@@ -675,7 +676,7 @@ test("the Code mode pane's Built-in tools switch keeps tools declared or leaves 
   const saving = codemodeView(info({ settingsPath, value: "on" }), { view: { codemodeSave: { saving: true, error: null, target: "mode" } } });
   assert.deepEqual(modeOptions(saving).map(([, , disabled]) => disabled), [true, true]);
   assert.deepEqual(codemodeOptions(saving).map(({ disabled }) => disabled), [true, true]);
-  assert.equal(decode(saving).match(/role="status"/g).length, 1);
+  assert.equal(decode(saving).match(/role="status" class="mcp-config-line/g).length, 1);
   assert.match(text(saving), /Built-in tools Direct In scripts Saving…/);
   // Another write on its way makes the switch wait as well.
   assert.deepEqual(modeOptions(codemodeView(info({ settingsPath, value: "on" }), { view: { busy: "switch:global\0docs" } })).map(([, , disabled]) => disabled), [true, true]);

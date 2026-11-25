@@ -95,6 +95,16 @@ export interface SkillInfo {
   sourceInfo: {
     source?: string;
     scope?: string;
+    origin?: string;
+    baseDir?: string;
+  };
+  grouping?: {
+    scope: "project" | "global" | "path";
+    kind: "plugin" | "local" | "path";
+    sourceKey: string;
+    sourceLabel: string;
+    rootKey: string;
+    directorySegments: string[];
   };
   install?: SkillInstallInfo;
 }

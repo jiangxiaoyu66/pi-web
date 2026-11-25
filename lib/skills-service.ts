@@ -1,6 +1,7 @@
 import { DefaultResourceLoader, getAgentDir } from "@earendil-works/pi-coding-agent";
 import type { SkillInfo, SkillsResponse } from "@/lib/api-types";
 import { annotateSkillsWithInstallInfo } from "@/lib/skill-lock";
+import { annotateSkillGrouping } from "@/lib/skill-grouping";
 import { getProjectTrustStatus, projectTrustReloadOptions } from "@/lib/project-trust";
 
 export async function loadSkillsWithInstallInfo(cwd: string): Promise<SkillsResponse> {
@@ -12,7 +13,10 @@ export async function loadSkillsWithInstallInfo(cwd: string): Promise<SkillsResp
   await loader.reload(projectTrustReloadOptions(cwd, agentDir));
   const { skills, diagnostics } = loader.getSkills();
   return {
-    skills: annotateSkillsWithInstallInfo(skills as SkillInfo[], { cwd, agentDir }),
+    skills: annotateSkillGrouping(
+      annotateSkillsWithInstallInfo(skills as SkillInfo[], { cwd, agentDir }),
+      { cwd, agentDir },
+    ),
     diagnostics,
     projectResourcesLoaded: getProjectTrustStatus(cwd, agentDir).trusted,
   };

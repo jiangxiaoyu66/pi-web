@@ -65,6 +65,9 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" />
         <meta name="google" content="notranslate" />
+        {process.env.NODE_ENV === "development" && (
+          <script src="/dev-sw-cleanup.js" async />
+        )}
         <script
           dangerouslySetInnerHTML={{
             __html: THEME_INIT_SCRIPT,

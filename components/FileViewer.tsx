@@ -30,6 +30,7 @@ import { CodeBlock, MermaidBlock } from "./MermaidBlock";
 import { PlantUmlBlock } from "./PlantUmlBlock";
 import { isPlantUmlLang } from "@/lib/plantuml";
 import { DelimitedTable } from "./DelimitedTable";
+import { OpenInEditorButton } from "./OpenInEditor";
 import { isDelimitedTablePath } from "@/lib/delimited-table";
 import { FrontmatterCard } from "./FrontmatterCard";
 import { diffGapLabel, parseUnifiedPatch, unifiedDiffLines, type SplitDiffGap, type UnifiedDiffLine } from "@/lib/patch";
@@ -702,6 +703,7 @@ function ImageViewer({ filePath, cwd, sourceSessionId, watchEnabled = true }: Pr
           {getRelativeFilePath(filePath, cwd)}
         </span>
         <span style={{ marginLeft: "auto" }}>{ext || "image"}</span>
+        <OpenInEditorButton target={{ path: filePath, cwd }} />
         {naturalSize && <span>{naturalSize.w} × {naturalSize.h}</span>}
         {formatSizeStr && <span>{formatSizeStr}</span>}
         <span
@@ -883,6 +885,7 @@ function AudioViewer({ filePath, cwd, sourceSessionId, watchEnabled = true }: Pr
           {getRelativeFilePath(filePath, cwd)}
         </span>
         <span style={{ marginLeft: "auto" }}>{ext || "audio"}</span>
+        <OpenInEditorButton target={{ path: filePath, cwd }} />
         {duration != null && <span>{formatDuration(duration)}</span>}
         {size != null && <span>{formatSize(size)}</span>}
         <span
@@ -1047,6 +1050,7 @@ function VideoViewer({ filePath, cwd, sourceSessionId, watchEnabled = true }: Pr
           {getRelativeFilePath(filePath, cwd)}
         </span>
         <span style={{ marginLeft: "auto" }}>{ext || "video"}</span>
+        <OpenInEditorButton target={{ path: filePath, cwd }} />
         {duration != null && <span>{formatDuration(duration)}</span>}
         {size != null && <span>{formatSize(size)}</span>}
         <span
@@ -1244,6 +1248,7 @@ function DocumentViewer({ filePath, cwd, sourceSessionId, initialPage, watchEnab
           {getRelativeFilePath(filePath, cwd)}
         </span>
         <span style={{ marginLeft: "auto" }}>{ext === "docx" ? "docx preview" : "pdf"}</span>
+        <OpenInEditorButton target={{ path: filePath, cwd }} />
         {size != null && <span>{formatSize(size)}</span>}
         <DownloadLink filePath={filePath} sourceSessionId={sourceSessionId} />
         <span
@@ -1959,6 +1964,7 @@ function TextFileViewer({
           )}
 
           <div className="file-viewer-actions">
+            <OpenInEditorButton target={{ path: isDeletedDiff ? null : filePath, cwd }} />
             {(onAtMention || onMentionLines) && (
               <button
                 type="button"

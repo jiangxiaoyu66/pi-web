@@ -1,5 +1,10 @@
 # Mobile and browser behavior
 
+## Development after a PWA/production visit
+- A production Pi Web service worker can still control this origin after starting `next dev`. Its cache-first `/_next/static/` policy can replay old development chunks; an ordinary reload alone does not guarantee new client code.
+- `app/layout.tsx` includes `/dev-sw-cleanup.js` only in development. This standalone public script arrives through fresh network HTML, outside the stale chunk cache. It unregisters only same-origin root `/sw.js` registrations, deletes only `pi-web-static-*` asset caches and navigates once if that worker controlled this document. It never clears localStorage, sessions, settings or unrelated workers. Production does not include it.
+- `lib/dev-service-worker-cleanup.test.mjs` checks scope isolation, reload termination, storage restrictions and the dev-only layout gate. Live reproduction seeded an old worker/cache in an isolated browser, verified cached bytes, then verified no controller after cleanup. Real-session MCP evidence: `test-results/mcp-categories/real-session-fixed.png` (not mocked data).
+
 ## Mobile software keyboard (`hooks/useViewportHeight.ts`)
 - While an editor has focus and the visual viewport is more than `KEYBOARD_MIN_HEIGHT_PX` (60px) shorter than `innerHeight / scale`, the hook writes `visualViewport.height` to `--app-viewport-height`; smaller shrinks are Safari toolbars. Always compare against that zoom-corrected height, or iOS auto-zoom and pinch zoom leave the composer behind the keyboard.
 - WebKit settles the shrunken height only after the keyboard animation, often without another `resize` (bugs.webkit.org 265578), and an IME candidate bar resizes the keyboard with no viewport event at all. So every trigger, composition/input/keyup events on a focused editor included, starts one non-restarting chain of re-reads (`SETTLE_DELAYS_MS`). Reading once per event keeps the full-screen height, and `scrollTo(0, 0)` then fights the page scrolling to the caret: a jittering composer.

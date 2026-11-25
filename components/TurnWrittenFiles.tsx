@@ -4,6 +4,7 @@ import { useI18n } from "@/hooks/useI18n";
 import { getFileName } from "@/lib/file-paths";
 import type { WrittenFile } from "@/lib/turn-written-files";
 import { getFileIcon } from "./FileIcons";
+import { useEditorActions } from "./OpenInEditor";
 
 /**
  * Lists the files a turn actually wrote, as buttons that open each one in the
@@ -19,11 +20,23 @@ export function TurnWrittenFiles({ files, onOpenFile }: {
 
   return (
     <div aria-label={t("chat.filesWritten")} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, marginTop: 6 }}>
-      {files.map(({ filePath }) => {
-        const name = getFileName(filePath);
-        return (
+      {files.map(({ filePath }) => <WrittenFileTag key={filePath} filePath={filePath} onOpenFile={onOpenFile} />)}
+    </div>
+  );
+}
+
+function WrittenFileTag({ filePath, onOpenFile }: {
+  filePath: string;
+  onOpenFile?: (filePath: string) => void;
+}) {
+  const { t } = useI18n();
+  const editor = useEditorActions({ path: filePath });
+  const name = getFileName(filePath);
+  return (
+    <>
           <button
-            key={filePath}
+            onContextMenu={editor.onContextMenu}
+            onKeyDown={editor.onKeyDown}
             type="button"
             title={filePath}
             aria-label={t("chat.openWrittenFile", { name })}
@@ -45,8 +58,7 @@ export function TurnWrittenFiles({ files, onOpenFile }: {
             {getFileIcon(name, 12)}
             <span>{name}</span>
           </button>
-        );
-      })}
-    </div>
+          {editor.menu}
+    </>
   );
 }

@@ -10,6 +10,7 @@ const jiti = createJiti(import.meta.url, {
 const React = await jiti.import("react");
 const { renderToStaticMarkup } = await jiti.import("react-dom/server");
 const { TreeNode } = await jiti.import("./FileExplorer.tsx");
+const { I18nProvider } = await jiti.import("@/hooks/useI18n");
 const { enLocale } = await jiti.import("@/lib/i18n/messages/en.ts");
 const { translateMessage } = await jiti.import("@/lib/i18n/format.ts");
 
@@ -17,7 +18,7 @@ const source = await readFile(new URL("./FileExplorer.tsx", import.meta.url), "u
 const t = (key, params) => translateMessage("en", key, { en: enLocale.messages }, params);
 
 function renderNode(node, { open = true } = {}) {
-  return renderToStaticMarkup(React.createElement(TreeNode, {
+  return renderToStaticMarkup(React.createElement(I18nProvider, null, React.createElement(TreeNode, {
     node,
     depth: 0,
     cwd: "/hub",
@@ -28,7 +29,7 @@ function renderNode(node, { open = true } = {}) {
     gitStatusByPath: new Map(),
     changedDirectoryPaths: new Set(),
     t,
-  }));
+  })));
 }
 
 const linkedNode = {

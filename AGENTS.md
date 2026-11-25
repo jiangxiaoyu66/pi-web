@@ -1,5 +1,9 @@
 # Pi Web - Development Notes
 
+## Miro Fork
+
+This checkout is PiWeb Miro. Read [docs/miro-workflow.md](docs/miro-workflow.md) before branch, release, or startup work. `miro/main` is the stable runtime branch, `miro/dev` is development, and `sync/*` validates upstream merges. The stable launcher is `bash bin/miro-start.sh`; do not replace the fork with a global npm update. MCP categories intentionally use an independent agent-directory JSON file as a user-approved fork exception to upstream configuration policy. Never commit `.pi/mcp.json` or `.pi/pi-cast/`.
+
 ## Quick Start
 
 ```bash

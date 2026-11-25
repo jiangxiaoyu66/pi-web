@@ -27,6 +27,10 @@
 /.agents/
 /skills-lock.json
 
+# Machine-local MCP configuration and execution audit (never publish with fork code)
+/.pi/mcp.json
+/.pi/pi-cast/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

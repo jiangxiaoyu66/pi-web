@@ -3,6 +3,7 @@
 import { forwardRef, useState, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { getFileIcon, FolderIcon } from "./FileIcons";
 import { DismissButton } from "./DismissButton";
+import { useEditorActions } from "./OpenInEditor";
 import {
   encodeFilePathForApi,
   getFileDirectory,
@@ -241,6 +242,7 @@ export function TreeNode({
   onDropTargetChange?: (path: string | null) => void;
   t: Translate;
 }) {
+  const editor = useEditorActions({ path: node.fullPath, cwd, isDirectory: node.isDir });
   const open = expandedPaths.has(node.fullPath);
   const hidden = node.hidden ?? parentHidden;
   const isDropTarget = node.isDir && dropTargetPath === node.fullPath;
@@ -348,6 +350,19 @@ export function TreeNode({
   return (
     <div>
       <div
+        className="editor-file-row"
+        role="button"
+        tabIndex={0}
+        aria-expanded={node.isDir ? open : undefined}
+        onContextMenu={editor.onContextMenu}
+        onKeyDown={(event) => {
+          editor.onKeyDown(event);
+          if (event.defaultPrevented || event.target !== event.currentTarget) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleClick();
+          }
+        }}
         onClick={handleClick}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -455,6 +470,9 @@ export function TreeNode({
             <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" />
           </svg>
         )}
+        <span className="editor-row-action" style={{ position: "absolute", right: node.isDir ? 4 : 28 }}>
+          {editor.button}
+        </span>
         {onAtMention && hovered && (
           <button
             onClick={(e) => {
@@ -464,7 +482,7 @@ export function TreeNode({
             title={t("files.insertPath")}
             style={{
               position: "absolute",
-              right: !node.isDir ? 28 : 4,
+              right: !node.isDir ? 56 : 32,
               top: "50%",
               transform: "translateY(-50%)",
               display: "flex",
@@ -523,6 +541,7 @@ export function TreeNode({
           </a>
         )}
       </div>
+      {editor.menu}
       {node.isDir && open && pendingLinkTarget && (
         <div
           style={{

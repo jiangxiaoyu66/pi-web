@@ -2498,6 +2498,38 @@ pre, code {
   text-decoration: none;
 }
 
+.editor-row-action {
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.editor-file-row:hover .editor-row-action,
+.editor-file-row:focus-within .editor-row-action {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.editor-row-action .editor-open-button {
+  width: 22px;
+  height: calc(var(--file-row-height) - 4px);
+  flex-basis: 22px;
+  background: var(--bg-panel);
+}
+
+.editor-file-row:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+@media (hover: none) {
+  .editor-row-action {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 .file-viewer-icon-button:hover {
   background: var(--bg-hover) !important;
   color: var(--text);

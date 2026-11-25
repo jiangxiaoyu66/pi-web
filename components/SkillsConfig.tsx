@@ -34,9 +34,6 @@ import {
   ConfigSaveTarget,
   ConfigScopeTag,
   ConfigSidebar,
-  ConfigSidebarGroupLabel,
-  ConfigSidebarGroupStatus,
-  ConfigSidebarGroupSwitch,
   ConfigSidebarItem,
   ConfigSidebarList,
   ConfigSidebarText,
@@ -44,18 +41,20 @@ import {
   ConfigStatusDot,
   ConfigSwitch,
   ConfigTrustNotice,
+  useConfigDetailNavigation,
 } from "./SettingsUi";
 import { itemsToSwitch, projectTrustReloadKey } from "./settings-ui-helpers";
 import { MarkdownBody } from "./MarkdownBody";
+import { SkillGroupTree } from "./SkillGroupTree";
 
 type SkillScope = "global" | "project" | "path";
 type Translate = ReturnType<typeof useI18n>["t"];
 
 function sourceLabel(skill: Skill): SkillScope {
-  const src = skill.sourceInfo?.source;
-  const scope = skill.sourceInfo?.scope;
-  if (scope === "user" || src === "user") return "global";
-  if (scope === "project" || src === "project") return "project";
+  if (skill.grouping) return skill.grouping.scope;
+  const scope = skill.sourceInfo?.scope ?? skill.sourceInfo?.source;
+  if (scope === "user") return "global";
+  if (scope === "project") return "project";
   return "path";
 }
 
@@ -140,6 +139,7 @@ function SkillDetail({
   cwd,
   onToggle,
   toggling,
+  writeBusy,
   saveError,
   updateStatus,
   checkingUpdate,
@@ -152,6 +152,7 @@ function SkillDetail({
   cwd: string;
   onToggle: (skill: Skill) => void;
   toggling: boolean;
+  writeBusy: boolean;
   saveError: string | null;
   updateStatus?: SkillUpdateResult;
   checkingUpdate: boolean;
@@ -170,6 +171,15 @@ function SkillDetail({
   const [documents, setDocuments] = useState<string[]>([]);
   const documentPath = documents.at(-1) ?? rootDocument;
   const instructionsRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
+  const { detailOpen, reportDetailTitle } = useConfigDetailNavigation();
+  // A selected row can be unmounted when its group is collapsed. The detail
+  // remains the title source even then, but never for hidden settings panels.
+  useLayoutEffect(() => {
+    if (detailOpen && headingRef.current && !headingRef.current.closest("[hidden]")) {
+      reportDetailTitle(skill.name);
+    }
+  }, [detailOpen, reportDetailTitle, skill.name]);
   // The heading to bring into view once its document shows; "" is the top.
   const pendingAnchor = useRef<string | null>(null);
   const [anchorRequest, setAnchorRequest] = useState(0);
@@ -218,7 +228,7 @@ function SkillDetail({
   return (
     <ConfigDetailStack>
       {/* Path + tag + toggle, with a stable status row below. */}
-      <div className="skill-detail-heading">
+      <div className="skill-detail-heading" ref={headingRef}>
         <ConfigDetailHeader>
           <ConfigDetailHeaderInfo>
             <ConfigScopeTag scope={label}>{scopeLabel(label, t)}</ConfigScopeTag>
@@ -230,6 +240,7 @@ function SkillDetail({
             <ConfigSwitch
               checked={enabled}
               loading={toggling}
+              disabled={writeBusy}
               label={enabled ? t("i18n.visibleInPrompt") : t("i18n.hiddenFromPrompt")}
               onChange={() => onToggle(skill)}
             />
@@ -248,6 +259,12 @@ function SkillDetail({
           )}
         </div>
       </div>
+
+      {skill.grouping && skill.grouping.directorySegments.length > 0 && (
+        <div className="config-detail-path" style={{ overflowWrap: "anywhere", whiteSpace: "normal" }}>
+          {[scopeLabel(skill.grouping.scope, t), ...skill.grouping.directorySegments, skill.name].join(" / ")}
+        </div>
+      )}
 
       {skill.install?.skillsShUrl && (
         <ConfigField label={t("config.source")}>
@@ -275,7 +292,7 @@ function SkillDetail({
               <ConfigButton
                 size="small"
                 onClick={onCheckUpdate}
-                disabled={checkingUpdate || updating}
+                disabled={checkingUpdate || writeBusy}
               >
                  {t("i18n.check")}
               </ConfigButton>
@@ -310,7 +327,7 @@ function SkillDetail({
                 variant="primary"
                 size="small"
                 onClick={onUpdate}
-                disabled={updating || checkingUpdate}
+                disabled={writeBusy || checkingUpdate}
               >
                  {updating ? t("i18n.updating") : t("i18n.update")}
               </ConfigButton>
@@ -365,12 +382,18 @@ function AddSkillPanel({
   cwd,
   installedPackages,
   projectResourcesLoaded,
+  disabled,
+  onBeginInstall,
+  onEndInstall,
   onInstalled,
 }: {
   cwd: string;
   installedPackages: Record<SkillInstallScope, ReadonlySet<string>>;
   projectResourcesLoaded: boolean;
-  onInstalled: () => void;
+  disabled: boolean;
+  onBeginInstall: () => boolean;
+  onEndInstall: () => void;
+  onInstalled: () => Promise<unknown>;
 }) {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
@@ -419,6 +442,7 @@ function AddSkillPanel({
 
   const install = useCallback(
     async (pkg: string) => {
+      if (disabled || !onBeginInstall()) return;
       setInstalling(pkg);
       setInstallError(null);
       try {
@@ -435,14 +459,15 @@ function AddSkillPanel({
         setNewlyInstalledPkgs((prev) =>
           new Set(prev).add(`${scope}:${pkg}`),
         );
-        onInstalled();
+        await onInstalled();
       } catch (e) {
         setInstallError(String(e));
       } finally {
         setInstalling(null);
+        onEndInstall();
       }
     },
-    [onInstalled, scope, cwd],
+    [onInstalled, onBeginInstall, onEndInstall, disabled, scope, cwd],
   );
 
   const installPath =
@@ -606,7 +631,7 @@ function AddSkillPanel({
                   onClick={() =>
                     !isInstalled && !isInstalling && install(r.package)
                   }
-                  disabled={isInstalled || isInstalling || installing !== null}
+                  disabled={disabled || isInstalled || isInstalling || installing !== null}
                   style={{
                     flexShrink: 0,
                     background: isInstalled ? "rgba(34,197,94,0.1)" : "none",
@@ -661,6 +686,25 @@ export function SkillsConfig({
   const [updatingSkill, setUpdatingSkill] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [projectResourcesLoaded, setProjectResourcesLoaded] = useState(true);
+  const [installingSkill, setInstallingSkill] = useState(false);
+  // State disables controls; the ref also prevents two handlers in the same
+  // render from starting competing writes before React flushes that state.
+  const writeInProgress = useRef(false);
+  const beginWrite = useCallback(() => {
+    if (loading || writeInProgress.current) return false;
+    writeInProgress.current = true;
+    return true;
+  }, [loading]);
+  const endWrite = useCallback(() => { writeInProgress.current = false; }, []);
+  const beginInstall = useCallback(() => {
+    if (!beginWrite()) return false;
+    setInstallingSkill(true);
+    return true;
+  }, [beginWrite]);
+  const endInstall = useCallback(() => {
+    setInstallingSkill(false);
+    endWrite();
+  }, [endWrite]);
 
   const loadSkills = useCallback(async () => {
     setLoading(true);
@@ -709,6 +753,7 @@ export function SkillsConfig({
   }, [cwd, selected]);
 
   const checkForUpdates = useCallback(async (skill?: Skill) => {
+    if (writeInProgress.current) return;
     const targets = skill
       ? [skill]
       : skills.filter((item) => Boolean(item.install));
@@ -755,7 +800,8 @@ export function SkillsConfig({
   }, [cwd, skills]);
 
   const updateInstalledSkill = useCallback(async (skill: Skill) => {
-    if (!skill.install) return;
+    if (!skill.install || checkingUpdates.size > 0) return;
+    if (!beginWrite()) return;
     const key = updateKey(skill)!;
     setUpdatingSkill(key);
     setUpdateError(null);
@@ -793,10 +839,12 @@ export function SkillsConfig({
       setUpdateError(e instanceof Error ? e.message : String(e));
     } finally {
       setUpdatingSkill(null);
+      endWrite();
     }
-  }, [cwd, loadSkills]);
+  }, [cwd, loadSkills, beginWrite, endWrite, checkingUpdates.size]);
 
   const toggle = useCallback(async (skill: Skill) => {
+    if (!beginWrite()) return;
     const next = !skill.disableModelInvocation;
     setToggling((s) => new Set(s).add(skill.filePath));
     setSaveError(null);
@@ -830,8 +878,9 @@ export function SkillsConfig({
         n.delete(skill.filePath);
         return n;
       });
+      endWrite();
     }
-  }, []);
+  }, [beginWrite, endWrite]);
 
   // One PATCH for the whole group: each file is edited on its own and
   // reported separately, so the skills the route refuses keep their state and
@@ -839,6 +888,7 @@ export function SkillsConfig({
   const setGroupSkills = useCallback(async (group: string, groupSkills: Skill[], enabled: boolean) => {
     const targets = skillsToSwitch(groupSkills, enabled);
     if (targets.length === 0) return;
+    if (!beginWrite()) return;
     const filePaths = targets.map((skill) => skill.filePath);
     const disableModelInvocation = !enabled;
     setToggling((current) => new Set([...current, ...filePaths]));
@@ -875,11 +925,12 @@ export function SkillsConfig({
         for (const filePath of filePaths) next.delete(filePath);
         return next;
       });
+      endWrite();
     }
-  }, [t]);
+  }, [t, beginWrite, endWrite]);
 
   const selectedSkill = skills.find((s) => s.filePath === selected) ?? null;
-  const bulkBusy = loading || toggling.size > 0 || updatingSkill !== null;
+  const writeBusy = loading || toggling.size > 0 || updatingSkill !== null || installingSkill;
 
   return (
     <ConfigPanelShell embedded={embedded} title={t("common.skills")} subtitle={shortenPath(cwd)} closeLabel={t("i18n.close")} onClose={onClose}>
@@ -891,7 +942,7 @@ export function SkillsConfig({
           {/* Left: skill list */}
           <ConfigSidebar>
             <ConfigSidebarList>
-              {loading ? (
+              {loading && skills.length === 0 ? (
                 <div className="config-sidebar-message">
                    {t("i18n.loading")}
                 </div>
@@ -904,49 +955,14 @@ export function SkillsConfig({
                    {t("i18n.noSkills")}
                 </div>
               ) : (
-                (() => {
-                  const groups: { label: string; skills: typeof skills }[] = [];
-                  const scopeLabels = {
-                    project: t("skills.scope.project"),
-                    global: t("skills.scope.global"),
-                    path: t("skills.scope.path"),
-                  };
-                  const groupDefinitions = [
-                    {
-                      label: `${scopeLabels.project} / skills.sh`,
-                      matches: (skill: Skill) =>
-                        sourceLabel(skill) === "project" &&
-                        Boolean(skill.install?.skillsShUrl),
-                    },
-                    {
-                      label: scopeLabels.project,
-                      matches: (skill: Skill) =>
-                        sourceLabel(skill) === "project" &&
-                        !skill.install?.skillsShUrl,
-                    },
-                    {
-                      label: `${scopeLabels.global} / skills.sh`,
-                      matches: (skill: Skill) =>
-                        sourceLabel(skill) === "global" &&
-                        Boolean(skill.install?.skillsShUrl),
-                    },
-                    {
-                      label: scopeLabels.global,
-                      matches: (skill: Skill) =>
-                        sourceLabel(skill) === "global" &&
-                        !skill.install?.skillsShUrl,
-                    },
-                    {
-                      label: scopeLabels.path,
-                      matches: (skill: Skill) => sourceLabel(skill) === "path",
-                    },
-                  ];
-                  for (const { label, matches } of groupDefinitions) {
-                    const grpSkills = skills.filter(matches);
-                    if (grpSkills.length > 0)
-                      groups.push({ label, skills: grpSkills });
-                  }
-                  const renderSkillRow = (skill: Skill) => {
+                <SkillGroupTree
+                  skills={skills}
+                  selectedFilePath={addMode ? null : selected}
+                  busy={writeBusy}
+                  bulkGroup={bulkGroup}
+                  groupStatus={groupStatus}
+                  onToggleGroup={(node, enabled) => void setGroupSkills(node.id, node.skills, enabled)}
+                  renderSkill={(skill) => {
                     const isSelected =
                       !addMode && selected === skill.filePath;
                     const disabled = skill.disableModelInvocation;
@@ -975,34 +991,8 @@ export function SkillsConfig({
                         })()}
                       </ConfigSidebarItem>
                     );
-                  };
-                  return groups.map(
-                    ({ label: grpLabel, skills: grpSkills }) => {
-                      const visible = grpSkills.filter((skill) => !skill.disableModelInvocation).length;
-                      const allVisible = visible === grpSkills.length;
-                      return (
-                        <div key={grpLabel} className="config-sidebar-group">
-                          <ConfigSidebarGroupLabel
-                            aside={
-                              <ConfigSidebarGroupSwitch
-                                enabled={visible}
-                                total={grpSkills.length}
-                                disabled={bulkBusy}
-                                loading={bulkGroup === grpLabel}
-                                label={t(allVisible ? "skills.groupSwitchOn" : "skills.groupSwitchOff", { group: grpLabel })}
-                                onChange={(enabled) => void setGroupSkills(grpLabel, grpSkills, enabled)}
-                              />
-                            }
-                          >
-                            {grpLabel}
-                          </ConfigSidebarGroupLabel>
-                          {groupStatus?.group === grpLabel && <ConfigSidebarGroupStatus error={groupStatus.error} />}
-                          {orderSkillsByDormancy(grpSkills).map(renderSkillRow)}
-                        </div>
-                      );
-                    },
-                  );
-                })()
+                  }}
+                />
               )}
             </ConfigSidebarList>
             {/* Add skill button */}
@@ -1021,6 +1011,9 @@ export function SkillsConfig({
               <AddSkillPanel
                 cwd={cwd}
                 projectResourcesLoaded={projectResourcesLoaded}
+                disabled={writeBusy}
+                onBeginInstall={beginInstall}
+                onEndInstall={endInstall}
                 installedPackages={{
                   global: new Set(
                     skills
@@ -1033,9 +1026,7 @@ export function SkillsConfig({
                       .map((skill) => skill.install!.package),
                   ),
                 }}
-                onInstalled={() => {
-                  void loadSkills();
-                }}
+                onInstalled={loadSkills}
               />
             ) : loading ? null : selectedSkill ? (
               <SkillDetail
@@ -1044,6 +1035,7 @@ export function SkillsConfig({
                 cwd={cwd}
                 onToggle={toggle}
                 toggling={toggling.has(selectedSkill.filePath)}
+                writeBusy={writeBusy}
                 saveError={saveError}
                 updateStatus={
                   updateKey(selectedSkill)
@@ -1088,7 +1080,7 @@ export function SkillsConfig({
         >
           {!embedded && <ConfigButton onClick={onClose}>{t("i18n.close")}</ConfigButton>}
           {skills.some((skill) => Boolean(skill.install)) && (
-            <ConfigButton variant="secondary" onClick={() => void checkForUpdates()} disabled={checkingAll || updatingSkill !== null}>
+            <ConfigButton variant="secondary" onClick={() => void checkForUpdates()} disabled={checkingAll || writeBusy}>
               {checkingAll ? t("i18n.checking") : t("i18n.checkUpdates")}
             </ConfigButton>
           )}

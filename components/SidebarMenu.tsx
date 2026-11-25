@@ -125,6 +125,8 @@ export interface SidebarMenuProps {
   returnFocusTo?: HTMLElement | null;
   /** Desktop width in px. */
   width?: number;
+  /** Portaled controls opened inside Settings must sit above its modal. */
+  layer?: "settings";
   /**
    * The files tab's project and worktree menus on a desktop: the look of the
    * dropdowns they were on main, rows divided by lines, 11px.
@@ -390,6 +392,7 @@ export interface SidebarMenuSurfaceProps {
   cancelLabel: string;
   focusCancel?: boolean;
   width?: number;
+  layer?: "settings";
   classic?: boolean;
   footer?: ReactNode;
   surfaceRef?: Ref<HTMLDivElement>;
@@ -487,6 +490,7 @@ export function SidebarMenuSurface({
   cancelLabel,
   focusCancel = false,
   width = DEFAULT_MENU_WIDTH,
+  layer,
   classic = false,
   footer,
   surfaceRef,
@@ -541,7 +545,7 @@ export function SidebarMenuSurface({
         className={classic ? "sidebar-menu is-classic" : "sidebar-menu"}
         role={menuRole ?? "dialog"}
         aria-label={ariaLabel}
-        style={{ width }}
+        style={{ width, ...(layer === "settings" ? { zIndex: 1101 } : {}) }}
         {...isolateEvents}
       >
         {body}
@@ -550,7 +554,7 @@ export function SidebarMenuSurface({
   }
 
   return (
-    <div className="sidebar-sheet-layer" {...isolateEvents}>
+    <div className="sidebar-sheet-layer" style={layer === "settings" ? { zIndex: 1101 } : undefined} {...isolateEvents}>
       {/* The backdrop takes the tap that closes the sheet, so it reaches neither the
           drawer's own backdrop (which would close the sidebar) nor a row. */}
       <div className="sidebar-sheet-backdrop" aria-hidden="true" onClick={() => onClose("outside")} />
@@ -584,6 +588,7 @@ export function SidebarMenu({
   onClose,
   returnFocusTo,
   width,
+  layer,
   classic = false,
   footer,
   focusKey = "",
@@ -785,6 +790,7 @@ export function SidebarMenu({
       cancelLabel={cancelLabel}
       focusCancel={focusCancel}
       width={width}
+      layer={layer}
       classic={classic}
       footer={footer}
       surfaceRef={surfaceRef}

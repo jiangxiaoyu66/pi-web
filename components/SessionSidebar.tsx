@@ -104,6 +104,7 @@ import { DirectoryPicker } from "./DirectoryPicker";
 import { DismissButton } from "./DismissButton";
 import { FileExplorer, type FileExplorerHandle } from "./FileExplorer";
 import { PiWebTitle } from "./PiWebTitle";
+import { OpenInEditorButton } from "./OpenInEditor";
 import { ProjectWorktreePicker, type ProjectWorktreePickerHandle, type WorktreeRemoval } from "./ProjectWorktreePicker";
 import { SessionSearch } from "./SessionSearch";
 import { SessionTree, sessionRowTitle, type SessionTreeReveal } from "./SessionTree";
@@ -3276,6 +3277,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onSelectSid
             <div className="sidebar-files-keys" role="group" aria-label={t("sidebar.fileActions")}>
               {terminalButton}
               {fileManagerButton}
+              <OpenInEditorButton target={{ path: explorerCwd, isDirectory: true }} variant="sidebar" iconSize={13} />
               {uploadButton}
               {refreshButton}
               {ignoredFilesButton()}
@@ -3347,6 +3349,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onSelectSid
               <div className="sidebar-files-actions" role="group" aria-label={t("sidebar.fileActions")}>
                 {onOpenTerminal && terminalButton}
                 {fileManagerButton}
+                <OpenInEditorButton target={{ path: explorerCwd, isDirectory: true }} variant="sidebar" />
                 {uploadButton}
                 {refreshButton}
                 {ignoredFilesButton("sidebar-files-views-start")}

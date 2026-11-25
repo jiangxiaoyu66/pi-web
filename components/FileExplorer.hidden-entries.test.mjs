@@ -9,13 +9,14 @@ const jiti = createJiti(import.meta.url, {
 const React = await jiti.import("react");
 const { renderToStaticMarkup } = await jiti.import("react-dom/server");
 const { TreeNode } = await jiti.import("./FileExplorer.tsx");
+const { I18nProvider } = await jiti.import("@/hooks/useI18n");
 const { enLocale } = await jiti.import("@/lib/i18n/messages/en.ts");
 const { translateMessage } = await jiti.import("@/lib/i18n/format.ts");
 
 const t = (key, params) => translateMessage("en", key, { en: enLocale.messages }, params);
 
 function renderNode(node, { open = false, parentHidden } = {}) {
-  return renderToStaticMarkup(React.createElement(TreeNode, {
+  return renderToStaticMarkup(React.createElement(I18nProvider, null, React.createElement(TreeNode, {
     node,
     depth: 0,
     cwd: "/repo",
@@ -28,7 +29,7 @@ function renderNode(node, { open = false, parentHidden } = {}) {
     showHidden: true,
     parentHidden,
     t,
-  }));
+  })));
 }
 
 const file = (name, extra = {}) => ({

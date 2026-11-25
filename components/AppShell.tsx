@@ -345,6 +345,17 @@ export function AppShell() {
     reclampRightPanelWidth();
   }, [reclampRightPanelWidth, reclampSidebarWidth, rightPanelOpen]);
   const chatInputRef = useRef<ChatInputHandle | null>(null);
+  // Capture the launch URL before workspace restoration replaces its query.
+  // One request per page load, not on subsequent session switches.
+  const launchAutofocusRef = useRef(searchParams.get("autofocus") === "1");
+  const handleComposerReady = useCallback(() => {
+    if (!launchAutofocusRef.current || !chatInputRef.current) return;
+    launchAutofocusRef.current = false;
+    // Never take focus from a control or a dialog the user has already opened.
+    if (document.querySelector('[aria-modal="true"]')) return;
+    if (document.activeElement && document.activeElement !== document.body) return;
+    chatInputRef.current.focus();
+  }, []);
   // `/side <prompt>`: the text that seeds the side chat's composer, until its panel consumes it.
   const [sideChatPrompts, setSideChatPrompts] = useState<Record<string, string>>({});
   const topBarRef = useRef<HTMLDivElement>(null);
@@ -2917,6 +2928,7 @@ export function AppShell() {
               onSideSession={handleSideSession}
               modelsRefreshKey={modelsRefreshKey}
               chatInputRef={chatInputRef}
+              onComposerReady={handleComposerReady}
               onBranchDataChange={handleBranchDataChange}
               onSystemPromptChange={handleSystemPromptChange}
               onSystemToolsChange={handleSystemToolsChange}
