@@ -5,6 +5,7 @@ import type { SessionInfo } from "@/lib/types";
 import { listSessionFamilies, type SessionFamily, isHiddenRelation } from "@/lib/session-family";
 import { clearDraft } from "@/lib/draft-store";
 import { dispatchSessionRowContextMenu } from "@/lib/session-row-context-menu";
+import { downloadSession } from "@/lib/session-download-client";
 import { newSessionDeepLink, sessionDeepLink } from "@/lib/session-links";
 import { getProjectActivity, getRecentProjects } from "@/lib/project-groups";
 import { workspaceKeyOf } from "@/lib/workspace-memory";
@@ -355,6 +356,8 @@ const SIDEBAR_HEADER_HEIGHT = 36;
 
 const SESSION_ACTION_LABEL_KEYS: Record<SessionMenuActionId, string> = {
   "open-new-tab": "sidebar.openInNewTab",
+  "download-md": "sidebar.downloadMd",
+  "download-jsonl": "sidebar.downloadJsonl",
   pin: "sidebar.pin",
   unpin: "sidebar.unpin",
   rename: "sidebar.rename",
@@ -369,6 +372,8 @@ const SESSION_ACTION_LABEL_KEYS: Record<SessionMenuActionId, string> = {
 function sessionActionIcon(id: SessionMenuActionId): ReactNode {
   switch (id) {
     case "open-new-tab": return <OpenInNewTabIcon />;
+    case "download-md":
+    case "download-jsonl": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" /></svg>;
     case "pin": return <PinIcon />;
     case "unpin": return <PinOffIcon />;
     case "rename": return <PencilIcon />;
@@ -2240,6 +2245,14 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onSelectSid
     const { family } = row;
     switch (id) {
       case "open-new-tab": openFamilyInNewTab(family); break;
+      case "download-md":
+      case "download-jsonl": {
+        const format = id === "download-md" ? "md" : "jsonl";
+        void downloadSession(family.root.id, format, t("sidebar.downloadConfirm", { filename: `${family.root.id}.${format}` })).catch(error => {
+          showToast(t("sidebar.downloadFailed", { error: error instanceof Error ? error.message : String(error) }));
+        });
+        break;
+      }
       case "pin": setFamilyPinned(family, true); break;
       case "unpin": setFamilyPinned(family, false); break;
       case "rename": startRename(family); break;

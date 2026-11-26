@@ -17,6 +17,8 @@ import type { SessionUiStateRequest } from "./session-ui-state-shared";
 
 export type SessionMenuActionId =
   | "open-new-tab"
+  | "download-md"
+  | "download-jsonl"
   | "pin"
   | "unpin"
   | "rename"
@@ -42,14 +44,18 @@ export function sessionMenuEntries(
   status: SidebarFamilyStatus,
 ): SessionMenuEntry[] {
   if (status.transient) return [];
-  const openNewTab: SessionMenuEntry = { kind: "action", id: "open-new-tab", shortcut: "T" };
+  const fileActions: SessionMenuEntry[] = [
+    { kind: "action", id: "open-new-tab", shortcut: "T" },
+    { kind: "action", id: "download-md", shortcut: "M" },
+    { kind: "action", id: "download-jsonl", shortcut: "J" },
+  ];
   if (context === "archive") {
     return [
       { kind: "action", id: "unarchive", shortcut: "A" },
       { kind: "action", id: "pin", shortcut: "P" },
       { kind: "action", id: "rename", shortcut: "R" },
       { kind: "action", id: "fork", shortcut: "F" },
-      openNewTab,
+      ...fileActions,
       { kind: "separator" },
       { kind: "action", id: "delete", shortcut: "D" },
     ];
@@ -63,7 +69,7 @@ export function sessionMenuEntries(
     status.running
       ? { kind: "action", id: "archive", shortcut: "A", disabledReason: "running" }
       : { kind: "action", id: "archive", shortcut: "A" },
-    openNewTab,
+    ...fileActions,
     { kind: "separator" },
     { kind: "action", id: "delete", shortcut: "D" },
   ];
