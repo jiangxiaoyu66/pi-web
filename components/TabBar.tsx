@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { SidebarMenu } from "./SidebarMenu";
+import { fileCloseActions, fileCloseTargets } from "@/lib/file-tab-close";
 import { getFileIcon } from "./FileIcons";
 import { useHorizontalStrip } from "@/hooks/useHorizontalStrip";
 import { useI18n } from "@/hooks/useI18n";
@@ -25,11 +27,13 @@ interface Props {
   activeTabId: string;
   onSelectTab: (id: string) => void;
   onCloseTab: (id: string) => void;
+  onCloseFiles: (ids: string[]) => void;
   onReorderTab?: (source: string, target: string, after: boolean) => void;
 }
 
-export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, onReorderTab }: Props) {
+export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, onCloseFiles, onReorderTab }: Props) {
   const { t } = useI18n();
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number; opener: HTMLElement } | null>(null);
   const [hoveredClose, setHoveredClose] = useState<string | null>(null);
   // The strip has no scrollbar (globals.css): a vertical wheel scrolls it
   // sideways, and an opened or selected tab is brought into view.
@@ -106,6 +110,10 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, onReorderTa
                 (event.currentTarget.parentElement?.children[next] as HTMLElement)?.focus();
               }
             }}
+            onContextMenu={tab.kind === undefined ? (event) => {
+              event.preventDefault();
+              setMenu({ id: tab.id, x: event.clientX, y: event.clientY, opener: event.currentTarget });
+            } : undefined}
             onClick={() => onSelectTab(tab.id)}
             onMouseDown={(e) => {
               if (e.button === 1) e.preventDefault();
@@ -192,6 +200,15 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab, onReorderTa
           </div>
         );
       })}
+      {menu && tabs.some(tab => tab.id === menu.id && tab.kind === undefined) && (
+        <SidebarMenu open sheet={false} anchor={{ kind: "point", x: menu.x, y: menu.y }}
+          ariaLabel={t("fileTab.menu")} cancelLabel={t("i18n.cancel")} returnFocusTo={menu.opener}
+          onClose={() => setMenu(null)} items={fileCloseActions.map(action => {
+            const targets = fileCloseTargets(tabs, menu.id, action);
+            return { type: "item", id: action, label: t(`fileTab.${action}`), disabled: !targets.length,
+              onSelect: () => onCloseFiles(targets) };
+          })} />
+      )}
     </div>
   );
 }

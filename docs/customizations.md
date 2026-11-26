@@ -2,6 +2,18 @@
 
 分支、数据目录、启动及同步约定见 [Miro 工作流](miro-workflow.md)；本 Fork 的稳定主线是 `miro/main`，开发集成为 `miro/dev`。首次整理与 PiWeb 0.18.0 / Pi 1.6.0 升级的完整验收见 [升级记录](miro-upgrade-2026-11-25.md)：3820 项通过、0 失败、2 项原有跳过，并完成隔离真实 HTTP 重启与全部定制浏览器回归。下列各功能小节保留其阶段性专项证据，正式服务状态以部署回执为准。
 
+## 复制会话 JSONL 文件路径
+
+普通、置顶或归档会话行的右键 / ⋯ 菜单提供“复制 JSONL 文件路径”。复制的是服务器上**所点会话**的 `SessionInfo.path` 原值，不拼接文件名、不读取正文、不切换会话；远程浏览器得到的仍是服务器路径。未落盘的临时会话不提供此操作。
+
+`lib/sidebar-actions.ts` 和 `components/SessionSidebar.tsx` 接入内置菜单，复用 `copyText` 和侧栏提示报告成功或失败；现有下游右键事件可替换菜单，但不能向内置菜单插入一项。[上游](https://github.com/agegr/pi-web)提供等价操作后可移除。回归：`lib/sidebar-actions.test.mjs`、`lib/clipboard.test.mjs`、`e2e/session-navigation.mjs`。
+
+## 文件标签右键关闭
+
+右键右侧面板的文件标签，可关闭此项、其他、左侧、右侧或全部文件标签；左右按拖动后的显示顺序判断，没有目标的项禁用。操作只移除预览，不修改磁盘文件，不关闭终端、子代理或侧聊。
+
+扩展不能向 Web 标签栏插入菜单。`components/TabBar.tsx` 复用 `SidebarMenu`，`lib/file-tab-close.ts` 计算目标，`components/AppShell.tsx` 一次更新文件列表并沿用单项关闭的选中回退规则。回归见 `lib/file-tab-close.test.mjs`；若[上游标签栏](https://github.com/agegr/pi-web/blob/main/components/TabBar.tsx)提供等价的文件限定操作，可移除本定制。
+
 ## URL 启动时聚焦输入框
 
 - **用法**：打开 `/?autofocus=1`，或在已有 `?cwd=…` / `?session=…` 地址后追加 `&autofocus=1`。只有值为 `1` 才启用，默认行为不变。

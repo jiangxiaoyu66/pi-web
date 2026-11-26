@@ -17,6 +17,7 @@ import type { SessionUiStateRequest } from "./session-ui-state-shared";
 
 export type SessionMenuActionId =
   | "open-new-tab"
+  | "copy-jsonl-path"
   | "pin"
   | "unpin"
   | "rename"
@@ -42,12 +43,14 @@ export function sessionMenuEntries(
   status: SidebarFamilyStatus,
 ): SessionMenuEntry[] {
   if (status.transient) return [];
+  const copyPath: SessionMenuEntry = { kind: "action", id: "copy-jsonl-path", shortcut: "C" };
   const openNewTab: SessionMenuEntry = { kind: "action", id: "open-new-tab", shortcut: "T" };
   if (context === "archive") {
     return [
       { kind: "action", id: "unarchive", shortcut: "A" },
       { kind: "action", id: "pin", shortcut: "P" },
       { kind: "action", id: "rename", shortcut: "R" },
+      copyPath,
       { kind: "action", id: "fork", shortcut: "F" },
       openNewTab,
       { kind: "separator" },
@@ -57,6 +60,7 @@ export function sessionMenuEntries(
   return [
     { kind: "action", id: context === "pinned" ? "unpin" : "pin", shortcut: "P" },
     { kind: "action", id: "rename", shortcut: "R" },
+    copyPath,
     { kind: "action", id: "fork", shortcut: "F" },
     { kind: "action", id: status.unread ? "mark-read" : "mark-unread", shortcut: "U" },
     // A running family would come straight back: archiving waits for the run.

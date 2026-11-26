@@ -3,6 +3,7 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useState, useCallback, useMemo, useRef, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode, type Ref, type RefObject, type UIEvent as ReactUIEvent } from "react";
 import type { SessionInfo } from "@/lib/types";
 import { listSessionFamilies, type SessionFamily, isHiddenRelation } from "@/lib/session-family";
+import { copyText } from "@/lib/clipboard";
 import { clearDraft } from "@/lib/draft-store";
 import { dispatchSessionRowContextMenu } from "@/lib/session-row-context-menu";
 import { newSessionDeepLink, sessionDeepLink } from "@/lib/session-links";
@@ -359,6 +360,7 @@ const SESSION_ACTION_LABEL_KEYS: Record<SessionMenuActionId, string> = {
   unpin: "sidebar.unpin",
   rename: "sidebar.rename",
   fork: "sidebar.fork",
+  "copy-jsonl-path": "sidebar.copyJsonlPath",
   "mark-read": "sidebar.markRead",
   "mark-unread": "sidebar.markUnread",
   archive: "sidebar.archive",
@@ -373,6 +375,7 @@ function sessionActionIcon(id: SessionMenuActionId): ReactNode {
     case "unpin": return <PinOffIcon />;
     case "rename": return <PencilIcon />;
     case "fork": return <ForkIcon />;
+    case "copy-jsonl-path": return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2" /><path d="M15 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" /></svg>;
     case "mark-read": return <DotOutlineIcon />;
     case "mark-unread": return <DotIcon />;
     case "archive": return <ArchiveIcon />;
@@ -2243,6 +2246,12 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onSelectSid
       case "pin": setFamilyPinned(family, true); break;
       case "unpin": setFamilyPinned(family, false); break;
       case "rename": startRename(family); break;
+      case "copy-jsonl-path":
+        if (family.root.path) void copyText(family.root.path).then(
+          () => showToast(t("i18n.copied")),
+          () => showToast(t("sidebar.copyJsonlPathFailed")),
+        );
+        break;
       case "fork": void forkFamily(row); break;
       case "mark-read": markFamilyRead(family, true); break;
       case "mark-unread": markFamilyRead(family, false); break;
@@ -2566,7 +2575,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onSelectSid
       icon: sessionActionIcon(entry.id),
       shortcut: entry.shortcut,
       danger: entry.id === "delete",
-      disabled: entry.disabledReason !== undefined,
+      disabled: entry.disabledReason !== undefined || (entry.id === "copy-jsonl-path" && !row.family.root.path),
       disabledReason: entry.disabledReason === "running" ? t("sidebar.cannotArchiveRunning") : undefined,
       onSelect: ({ shiftKey }) => runSessionAction(entry.id, row, shiftKey),
     };

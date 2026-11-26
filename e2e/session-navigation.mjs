@@ -111,6 +111,23 @@ export async function checkSessionNavigation({ browser, base, artifacts, a, b, a
       assert.equal(await link(page, id).getAttribute("target"), null);
     }
 
+    // Copy B's catalogue path without opening B or fetching its transcript.
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: base });
+    const expectedPath = (await api("/api/sessions")).sessions.find(session => session.id === b.id).path;
+    const reads = [];
+    const trackRead = request => {
+      if (new URL(request.url()).pathname.startsWith(`/api/sessions/${b.id}`)) reads.push(request.url());
+    };
+    page.on("request", trackRead);
+    await row(page, b.id).click({ button: "right" });
+    await page.getByRole("menuitem", { name: /^Copy JSONL file path/ }).click();
+    await page.getByText("Copied", { exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => navigator.clipboard.readText()), expectedPath);
+    await expectShows(page, a.id);
+    page.off("request", trackRead);
+    assert.deepEqual(reads, []);
+    console.log("PASS: copied the inactive row's JSONL path without loading or selecting it");
+
     // A plain click selects in this tab, in place: no new tab, no page load.
     await markDocument(page);
     await link(page, b.id).click();

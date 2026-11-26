@@ -138,6 +138,18 @@ export async function checkLargeHtmlStorage(page, filePath) {
   assert.deepEqual(JSON.parse(await frame.locator("html").getAttribute("data-large-storage")), {
     value: "ready", session: "separate", mode: "CSS1Compat",
   });
+  const tab = panel.getByRole("tab", { name: "large-storage.html", exact: true });
+  const previous = panel.getByRole("tab", { name: "preview.html", exact: true });
+  await previous.click({ button: "right" });
+  assert.equal(await tab.getAttribute("aria-selected"), "true", "opening the menu does not select its anchor");
+  await page.getByRole("menuitem", { name: "Close other file tabs", exact: true }).click();
+  await tab.waitFor({ state: "detached" });
+  assert.equal(await previous.getAttribute("aria-selected"), "true");
+  await previous.click({ button: "right" });
+  for (const name of ["Close other file tabs", "Close file tabs to the left", "Close file tabs to the right"]) {
+    assert.equal(await page.getByRole("menuitem", { name, exact: true }).isDisabled(), true);
+  }
+  await page.keyboard.press("Escape");
   await panel.getByRole("button", { name: "Hide file panel", exact: true }).click();
-  console.log(`PASS: full-file sandboxed HTML storage preview at ${page.viewportSize().width}px`);
+  console.log(`PASS: file-tab context menu and full-file sandboxed HTML storage preview at ${page.viewportSize().width}px`);
 }

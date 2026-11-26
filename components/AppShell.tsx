@@ -1458,6 +1458,16 @@ export function AppShell() {
     if (!replacement && !remaining.length && !fileTabs.length && !agentTabs.length) setRightPanelOpen(false);
   };
 
+  const closeFiles = useCallback((ids: string[]) => {
+    const targets = new Set(ids);
+    const remaining = fileTabs.filter(tab => !targets.has(tab.id));
+    if (remaining.length === fileTabs.length) return;
+    setFileTabs(prev => prev.filter(tab => !targets.has(tab.id)));
+    const fallback = remaining.at(-1)?.id ?? terminalTabs.at(-1)?.id ?? lastAgentTabId(agentTabs);
+    setActiveFileTabId(cur => cur && targets.has(cur) ? fallback : cur);
+    if (!fallback) setRightPanelOpen(false);
+  }, [fileTabs, terminalTabs, agentTabs]);
+
   const handleCloseFileTab = useCallback((tabId: string) => {
     if (terminalTabs.some((tab) => tab.id === tabId)) {
       setTerminalTabs((tabs) => tabs.map((tab) => tab.id === tabId && !tab.closing ? { ...tab, closing: "close" } : tab));
@@ -1473,17 +1483,8 @@ export function AppShell() {
       if (fileTabs.length === 0 && terminalTabs.length === 0 && remainingAgents.length === 0) setRightPanelOpen(false);
       return;
     }
-    setFileTabs((prev) => {
-      const next = prev.filter((t) => t.id !== tabId);
-      if (next.length === 0 && terminalTabs.length === 0 && agentTabs.length === 0) setRightPanelOpen(false);
-      return next;
-    });
-    setActiveFileTabId((cur) => {
-      if (cur !== tabId) return cur;
-      const remaining = fileTabs.filter((t) => t.id !== tabId);
-      return remaining.at(-1)?.id ?? terminalTabs.at(-1)?.id ?? lastAgentTabId(agentTabs);
-    });
-  }, [fileTabs, terminalTabs, agentTabs]);
+    closeFiles([tabId]);
+  }, [fileTabs, terminalTabs, agentTabs, closeFiles]);
 
   // An extension's ctx.shutdown() ended the session's runtime, as pi quits: leave it the
   // way a deleted session is left (the refreshed list shows whether its file remains).
@@ -3037,6 +3038,7 @@ export function AppShell() {
               activeTabId={activeFileTabId ?? ""}
               onSelectTab={setActiveFileTabId}
               onCloseTab={handleCloseFileTab}
+              onCloseFiles={closeFiles}
               onReorderTab={(source, target, after) => setPanelTabOrder(movePanelTab(panelTabs.map((tab) => tab.id), source, target, after))}
             />
           </div>
