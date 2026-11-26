@@ -162,9 +162,9 @@ export async function checkSessionNavigation({ browser, base, artifacts, a, b, a
     const menu = page.getByRole("menu", { name: "Session actions" });
     await menu.waitFor();
     const items = (await menu.getByRole("menuitem").allInnerTexts()).map((text) => text.split("\n")[0].trim());
-    // After the actions that manage the session, just before Delete; never first (it would take the focus).
-    assert.deepEqual(items.slice(-2), ["Open in new tab", "Delete…"], `menu items: ${items.join(" | ")}`);
-    assert.equal(items[items.length - 3], "Archive", `menu items: ${items.join(" | ")}`);
+    // After the actions that manage the session, before downloads and Delete; never first (it would take the focus).
+    assert.deepEqual(items.slice(-4), ["Open in new tab", "Download MD", "Download JSONL", "Delete…"], `menu items: ${items.join(" | ")}`);
+    assert.equal(items[items.length - 5], "Archive", `menu items: ${items.join(" | ")}`);
     let tab = await newTab(() => menu.getByRole("menuitem", { name: /^Open in new tab/ }).click());
     await expectShows(tab, b.id);
     await expectShows(page, a.id);

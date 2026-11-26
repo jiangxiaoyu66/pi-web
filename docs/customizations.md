@@ -14,6 +14,12 @@
 
 扩展不能向 Web 标签栏插入菜单。`components/TabBar.tsx` 复用 `SidebarMenu`，`lib/file-tab-close.ts` 计算目标，`components/AppShell.tsx` 一次更新文件列表并沿用单项关闭的选中回退规则。回归见 `lib/file-tab-close.test.mjs`；若[上游标签栏](https://github.com/agegr/pi-web/blob/main/components/TabBar.tsx)提供等价的文件限定操作，可移除本定制。
 
+## 侧栏会话下载
+
+- 在会话菜单下载 Markdown（当前分支可见问答）或 JSONL（磁盘原始记录，可能含其他分支、工具输入输出等敏感数据）。导出所点会话，不切换聊天。
+- 保存到浏览器所在设备，不开放服务端任意路径写入。在支持的浏览器使用同一个原生另存为目录记忆标识；回退模式先确认，再按浏览器下载设置保存。
+- 接入 `components/SessionSidebar.tsx` 与 `/api/sessions/[id]/download`；侧栏菜单由 Web 客户端管理，不是扩展命令。若[上游](https://github.com/agegr/pi-web)提供等价双格式下载和保存交互，复核后移除此定制。
+
 ## URL 启动时聚焦输入框
 
 - **用法**：打开 `/?autofocus=1`，或在已有 `?cwd=…` / `?session=…` 地址后追加 `&autofocus=1`。只有值为 `1` 才启用，默认行为不变。

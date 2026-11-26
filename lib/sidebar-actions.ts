@@ -18,6 +18,8 @@ import type { SessionUiStateRequest } from "./session-ui-state-shared";
 export type SessionMenuActionId =
   | "open-new-tab"
   | "copy-jsonl-path"
+  | "download-md"
+  | "download-jsonl"
   | "pin"
   | "unpin"
   | "rename"
@@ -44,7 +46,11 @@ export function sessionMenuEntries(
 ): SessionMenuEntry[] {
   if (status.transient) return [];
   const copyPath: SessionMenuEntry = { kind: "action", id: "copy-jsonl-path", shortcut: "C" };
-  const openNewTab: SessionMenuEntry = { kind: "action", id: "open-new-tab", shortcut: "T" };
+  const fileActions: SessionMenuEntry[] = [
+    { kind: "action", id: "open-new-tab", shortcut: "T" },
+    { kind: "action", id: "download-md", shortcut: "M" },
+    { kind: "action", id: "download-jsonl", shortcut: "J" },
+  ];
   if (context === "archive") {
     return [
       { kind: "action", id: "unarchive", shortcut: "A" },
@@ -52,7 +58,7 @@ export function sessionMenuEntries(
       { kind: "action", id: "rename", shortcut: "R" },
       copyPath,
       { kind: "action", id: "fork", shortcut: "F" },
-      openNewTab,
+      ...fileActions,
       { kind: "separator" },
       { kind: "action", id: "delete", shortcut: "D" },
     ];
@@ -67,7 +73,7 @@ export function sessionMenuEntries(
     status.running
       ? { kind: "action", id: "archive", shortcut: "A", disabledReason: "running" }
       : { kind: "action", id: "archive", shortcut: "A" },
-    openNewTab,
+    ...fileActions,
     { kind: "separator" },
     { kind: "action", id: "delete", shortcut: "D" },
   ];

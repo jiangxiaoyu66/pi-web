@@ -1,0 +1,86 @@
+name: Miro Release
+
+on:
+  push:
+    branches:
+      - miro/main
+    tags:
+      - "miro-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: miro-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-and-release:
+    if: github.repository == 'jiangxiaoyu66/pi-web'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Pack tarball
+        id: pack
+        run: |
+          version=$(node -p "require('./package.json').version")
+          short_sha=$(git rev-parse --short HEAD)
+          packed=$(npm pack --silent | tail -n 1)
+          mkdir -p dist-release
+          cp "$packed" "dist-release/pi-web-miro.tgz"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            cp "$packed" "dist-release/pi-web-miro-${GITHUB_REF_NAME}.tgz"
+          fi
+          (cd dist-release && sha256sum *.tgz > SHA256SUMS.txt)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ steps.pack.outputs.version }}"
+          short_sha="${{ steps.pack.outputs.short_sha }}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            tag="${GITHUB_REF_NAME}"
+            title="PiWeb Miro ${tag}"
+          else
+            tag="miro-latest"
+            title="PiWeb Miro Latest (${version} @ ${short_sha})"
+          fi
+
+          notes=$(cat <<EOF
+          Automated production build of \`miro/main\`.
+
+          - **Version**: \`${version}\`
+          - **Commit**: \`${GITHUB_SHA}\`
+          - **Install / Update on macOS**:
+            \`\`\`bash
+            ~/.local/libexec/pi-web-install-release.sh ${tag}
+            \`\`\`
+          EOF
+          )
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --target "$GITHUB_SHA" --title "$title" --notes "$notes"
+            gh release upload "$tag" dist-release/* --clobber
+          else
+            gh release create "$tag" dist-release/* \
+              --target "$GITHUB_SHA" \
+              --title "$title" \
+              --notes "$notes"
+          fi
